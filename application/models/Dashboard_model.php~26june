@@ -1,0 +1,329 @@
+<?php
+defined('BASEPATH') OR exit('No direct script access allowed');
+
+class Dashboard_model extends CI_Model {
+	public function __construct()
+	{
+	// Call the CI_Model constructor
+	parent::__construct();
+	$this->load->database();
+	$this->load->library('Multipledb');
+	} 
+ 
+	public function GetSAtDetails()
+	{
+		$query = $this->db->query("SELECT pf.pfid as pack_id,pf.flavour_name, pf.flavour_description,pp.price FROM product_flavour pf join product_flavour_pricing pp on pp.flavour_id=pf.pfid WHERE pf.status=1 and pf.product_id=pp.product_id and pf.product_id=1");
+		//echo $this->db->last_query(); exit;
+		return $query->result_array();
+	}	
+	public function GetPuzzleDetails()
+	{
+		$query = $this->db->query("SELECT  pf.pfid as pack_id,pf.flavour_name, pf.flavour_description,pp.price FROM product_flavour pf join product_flavour_pricing pp on pp.flavour_id=pf.pfid WHERE pf.status=1 and pf.product_id=pp.product_id and pf.product_id=3 group by pp.flavour_id");
+		//echo $this->db->last_query(); exit;
+		return $query->result_array();
+	}
+	public function pack_details()
+	{
+		$query = $this->db->query("select pfid,flavour_name from product_flavour where product_id=1 and status=1");
+		//echo $this->db->last_query(); exit;
+		return $query->result_array();
+	
+	}
+	public function gradelist()
+	{
+		$query = $this->db->query("select * from grades where status='1'");
+		//echo $this->db->last_query(); exit;
+		return $query->result_array();
+	
+	}public function Getcurriculum()
+	{
+		$query = $this->db->query("select * from school_band_curriculum where status='1'");
+		//echo $this->db->last_query(); exit;
+		return $query->result_array();
+	
+	}
+	public function chk_SA_mobile($contactnumber)
+	{
+		$query = $this->db->query("select count(id) as tot from student_registration where username='".$contactnumber."' "); 
+		return $query->result_array();
+	}
+	public function addstudent($studentname,$emailid,$pack,$grade_id,$curriculum,$schoolname,$schoollocation,$couponcode,$contactnumber,$orgpassword,$password,$salt1,$salt2,$city,$state,$country,$pincode)
+	{
+		/* $query = $this->db->query("INSERT INTO `student_registration`(`student_name`, `email`, `grade_id`, `school_name`, `school_location`, `mobile`, `pack_id`, `curriculum_id`, `coupon_code`, `created_on`, `status`) VALUES ('".$studentname."','".$emailid."','".$grade_id."','".$schoolname."','".$schoollocation."','".$contactnumber."','".$pack."','".$curriculum."','".$couponcode."',NOW(),1)"); */
+		
+		$query = $this->db->query("CALL SAstudentInsert('".$studentname."','".$emailid."','".$grade_id."','".$schoolname."','".$schoollocation."','".$contactnumber."','".$pack."','".$curriculum."','".$couponcode."','".$orgpassword."','".$password."','".$salt1."','".$salt2."','".$city."','".$state."','".$country."','".$pincode."')"); 
+		
+		mysqli_next_result($this->db->conn_id);
+		//echo $this->db->last_query(); exit;
+		return $query->result_array();
+	
+	}
+	public function puzzle_pack_details()
+	{
+		$query = $this->db->query("select pfid,flavour_name from product_flavour where product_id=3 and status='1'");
+		//echo $this->db->last_query(); exit;
+		return $query->result_array();
+	
+	}	
+	public function chk_PB_mobile($spoc_mobile)
+	{
+		$query = $this->db->query("select count(id) as tot from puzzle_break_registration where username='".$spoc_mobile."' "); 
+		return $query->result_array();
+	}
+	
+	public function insert_puzzle_school($schoolname,$address,$spoc_name,$spoc_mail,$spoc_mobile,$spoc_licence,$pack,$grade,$couponcode,$orgpassword,$password,$salt1,$salt2,$city,$state,$country,$pincode)
+	{
+		/* $query = $this->db->query("INSERT INTO `puzzle_break_registration`(`school_name`, `address`, `spoc_name`, `spoc_mail`, `spoc_mobile`, `total_licence`, `grade_id`, `pack_id`, `coupon_code`, `created_on`, `created_by`, `modified_on`, `modified_by`, `status`) VALUES ('".$schoolname."','".$address."','".$spoc_name."','".$spoc_mail."','".$spoc_mobile."','".$spoc_licence."','".$grade."','".$pack."','".$couponcode."',NOW(),'',NOW(),'',1)"); */
+		
+		
+		 $query = $this->db->query("CALL PBschoolInsert('".$schoolname."','".$address."','".$spoc_name."','".$spoc_mail."','".$spoc_mobile."','".$spoc_licence."','".$grade."','".$pack."','".$couponcode."','".$orgpassword."','".$password."','".$salt1."','".$salt2."','".$city."','".$state."','".$country."','".$pincode."')"); 
+		
+		mysqli_next_result($this->db->conn_id);
+		//echo $this->db->last_query(); exit;
+		return $query->result_array();
+	
+	}
+	public function chk_bulk_user_email($spoc_mail)
+	{
+		$query = $this->db->query("select count(id) as tot from bulk_users_quotation where `spoc_mail`='".$spoc_mail."' and status='1'"); 
+		return $query->result_array();
+	}
+	public function insert_users($schoolname,$address,$spoc_name,$spoc_mail,$spoc_mobile,$spoc_licence,$program)
+	{
+		$query = $this->db->query("INSERT INTO `bulk_users_quotation`(`school_name`, `address`, `spoc_name`, `spoc_mail`, `spoc_mobile`, `total_licence`, `created_by`, `created_on`, `modified_by`, `modified_on`, `status`,`program_id`) VALUES ('".$schoolname."','".$address."','".$spoc_name."','".$spoc_mail."','".$spoc_mobile."','".$spoc_licence."','',NOW(),'',NOW(),1,'".$program."')");
+		//echo $this->db->last_query(); exit;	
+	}
+	 /**********************************************  SKILLANGELS - COUPONCODE  **************************************************/
+	public function GetCouponCodeDetails($couponcode)
+	{
+		$query = $this->db->query("select count(id) as iscouponvalid,coupon_valid_times,discount_percentage,coupon_used_times from couponmaster where couponcode='".$couponcode."' and status='1' and is_registered='Y' and product_id=1");		
+		return $query->result_array(); 
+	}
+	public function applycouponnew($couponcode)
+	{
+		$query = $this->db->query("select count(id) as iscouponvalid from couponmaster where couponcode='".$couponcode."' and (CURDATE() between valid_from and valid_to) and coupon_valid_times>coupon_used_times and status='1' and is_registered='Y' and product_id=1 ");		
+		//echo $this->db->last_query(); exit;	
+		return $query->result_array(); 
+	}
+	public function UpdateCouponCount($couponcode)
+	{
+		$query = $this->db->query("UPDATE couponmaster SET coupon_used_times=coupon_used_times+1 WHERE couponcode='".$couponcode."' and product_id=1 "); 
+	}
+	public function completestatus($subscriberid)
+	{
+		$query = $this->db->query('UPDATE student_registration SET paymentstatus="Y",completeddate="'.date("Y-m-d H:i:s").'" where md5(id)= "'.$subscriberid.'" ');		
+		//echo $this->db->last_query(); exit;
+	}
+	 /*********************************************** PUZZLE-BREAK - COUPONCODE*************************************************/
+	public function GetCouponCodeDetails_PB($couponcode)
+	{
+		$query = $this->db->query("select count(id) as iscouponvalid,coupon_valid_times,discount_percentage,coupon_used_times from couponmaster where couponcode='".$couponcode."' and status='1' and is_registered='Y' and product_id=3");		
+		return $query->result_array(); 
+	}
+	public function applycouponnew_PB($couponcode)
+	{
+		$query = $this->db->query("select count(id) as iscouponvalid from couponmaster where couponcode='".$couponcode."' and (CURDATE() between valid_from and valid_to) and coupon_valid_times>coupon_used_times and status='1' and is_registered='Y' and product_id=3");		
+		//echo $this->db->last_query(); exit;	
+		return $query->result_array(); 
+	}
+	public function UpdateCouponCount_PB($couponcode)
+	{
+		$query = $this->db->query("UPDATE couponmaster SET coupon_used_times=coupon_used_times+1 WHERE couponcode='".$couponcode."' and product_id=3"); 
+	}
+	public function completestatus_PB($subscriberid)
+	{
+		$query = $this->db->query('UPDATE puzzle_break_registration SET paymentstatus="Y",completeddate="'.date("Y-m-d H:i:s").'" where md5(id)= "'.$subscriberid.'" ');		
+		//echo $this->db->last_query(); exit;
+		
+	}
+	
+	
+	public function price_list($pack,$spoc_licence)
+    {		 
+		$query = $this->db->query('select ppid,price from product_flavour_pricing where flavour_id="'.$pack.'" and "'.$spoc_licence.'" between usercount_start_range AND usercount_end_range');		
+		//echo $this->db->last_query(); exit;
+		return $query->result_array();
+    }
+	public function GetstudentDetails($stdid)
+    {		 
+		$query = $this->db->query('select * from student_registration where id="'.$stdid.'"');		
+		//echo $this->db->last_query(); exit;
+		return $query->result_array();
+    }
+	
+	public function GetPBstudentDetails($stdid)
+    {		 
+		$query = $this->db->query('select * from puzzle_break_registration where id="'.$stdid.'"');		
+		//echo $this->db->last_query(); exit;
+		return $query->result_array();
+    }
+	
+	
+	/************************************* PAYMENT - B2C **********************************/
+	public function getInActiveChildIDDetails($stdid)
+	{
+		$query = $this->db->query('select * from  student_registration as sr join product_flavour as pf on pf.pfid=sr.pack_id where pf.product_id=1 and md5(id)="'.$stdid.'" AND status="0"');	
+		//echo $this->db->last_query(); exit;
+		return $query->result_array();
+	}
+	public function updateConfirmUser($stdid)
+	{
+		$query = $this->db->query('UPDATE student_registration SET status="1",visible="1",paymentstatus="Y" where id="'.$stdid.'"');
+		
+		/* $this->db->query("INSERT INTO user_academic_mapping(id, grade_id, gp_id, sid, section, academicid, status)VALUES(".$stdid.",'".$grade_id."','".$gp_id."',2,'A',20,1)"); */
+	}
+	public function updateChildFailureUser($stdid,$paymentstatus)
+	{
+		$query = $this->db->query('UPDATE student_registration SET paymentstatus="'.$paymentstatus.'" where id="'.$stdid.'"');
+	}
+	
+	public function getresponsedetails($stdid)
+	{
+		$query = $this->db->query('select * from  student_registration as sr join product_flavour as pf on pf.pfid=sr.pack_id where pf.product_id=1 and md5(id)="'.$stdid.'"');		
+		//echo $this->db->last_query();
+		return $query->result_array();
+	}
+	public function subscriberexistchk($subscriberid)
+	{
+		$query = $this->db->query('select count(id) as subid, student_name from student where subscriberid = "'.$subscriberid.'"');		
+		//echo $this->db->last_query(); exit;
+		return $query->result_array();
+	}
+	/* public function getconfigdetails($couponcode)
+	{
+		$query = $this->db->query('select id,validity,CURDATE() as startdate,DATE_ADD(CURDATE(), INTERVAL validity-1 DAY) as enddate from organization_master where id IN(select organization_id from couponmaster where couponcode="'.$couponcode.'" and status="1")');
+		//echo $this->db->last_query(); 
+		return $query->result_array();
+	} */
+	public function getconfigdetails($pack_id)
+	{
+		$query = $this->db->query('select pfid,validity,CURDATE() as startdate,DATE_ADD(CURDATE(), INTERVAL validity-1 DAY) as enddate from product_flavour where pfid="'.$pack_id.'" and status="1" and product_id=1');
+		//echo $this->db->last_query(); 
+		return $query->result_array();
+	}
+	public function getDefaultPlandetails()
+	{
+		$query = $this->db->query('select id,validity,CURDATE() as startdate,DATE_ADD(CURDATE(), INTERVAL validity DAY) as enddate from organization_master where id=1');
+		//echo $this->db->last_query(); 
+		return $query->result_array();
+	}
+	public function subscribeusers($subscriberid,$salt1,$salt2,$email,$password,$gradeid,$student_name,$mobile,$school_location,$couponcode,$orgpwd,$startdate,$enddate,$profileimage,$username,$pack_id,$curriculum_id,$school_name,$city,$state,$country,$pincode)
+	{
+		$query = $this->db->query('INSERT INTO student(subscriberid,email, salt1, password, salt2, student_name,mobile, status, grade_id,school_location, username,school_name,created_on,org_password,coupon_code,startdate,enddate,org_id,avatarimage,agreetermsandservice,pack_id,curriculum_id,city,state,country,pincode)
+		VALUES("'.$subscriberid.'","'.$email.'","'.$salt1.'","'.$password.'","'.$salt2.'","'.$student_name.'","'.$mobile.'",1,"'.$gradeid.'","'.$school_location.'","'.$username.'","'.$school_name.'","'.date("Y-m-d").'","'.$orgpwd.'","'.$couponcode.'","'.$startdate.'","'.$enddate.'",1,"'.$profileimage.'",1,"'.$pack_id.'","'.$curriculum_id.'","'.$city.'","'.$state.'","'.$country.'","'.$pincode.'")');
+		
+		$lastid=$this->db->insert_id();
+		//echo $this->db->last_query();
+		return $lastid;
+	}
+	public function getstdlist($stdid)
+	{
+		$query = $this->db->query('select * from  student_registration  where md5(id)="'.$stdid.'"');		
+		//echo $this->db->last_query();
+		return $query->result_array();
+	}
+	
+	/************************************* PAYMENT - B2C - END **********************************/
+	/************************************* PAYMENT - PB - START **********************************/
+	
+	public function getInActiveChildIDDetails_PB($stdid)
+	{
+		$query = $this->db->query('select * from  puzzle_break_registration as pr join product_flavour as pf on pf.pfid=pr.pack_id  where pf.product_id=3 and md5(id)="'.$stdid.'" AND status="0"');
+		//echo $this->db->last_query();
+		return $query->result_array();
+	}
+	public function updateConfirmUser_PB($stdid)
+	{
+		$query = $this->db->query('UPDATE puzzle_break_registration SET status="1",visible="1",paymentstatus="Y" where id="'.$stdid.'"');
+		
+		/* $this->db->query("INSERT INTO user_academic_mapping(id, grade_id, gp_id, sid, section, academicid, status)VALUES(".$stdid.",'".$grade_id."','".$gp_id."',2,'A',20,1)"); */
+	}
+/* 	public function updateChildFailureUser_PB($stdid,$paymentstatus)
+	{
+		$query = $this->db->query('UPDATE puzzle_break_registration SET paymentstatus="'.$paymentstatus.'" where id="'.$stdid.'"');
+	} */
+	
+	public function getresponsedetails_PB($stdid)
+	{
+		$query = $this->db->query('select * from  puzzle_break_registration as pr join product_flavour as pf on pf.pfid=pr.pack_id  where pf.product_id=3 and md5(id)="'.$stdid.'"');		
+		//echo $this->db->last_query();
+		return $query->result_array();
+	}
+	public function subscriberexistchk_PB($subscriberid)
+	{
+		$query = $this->db->query('select count(id) as subid, spoc_name from puzzle_break_school where subscriberid = "'.$subscriberid.'"');		
+		//echo $this->db->last_query(); exit;
+		return $query->result_array();
+	}
+	/* public function getconfigdetails_PB($couponcode)
+	{
+		$query = $this->db->query('select id,validity,CURDATE() as startdate,DATE_ADD(CURDATE(), INTERVAL validity-1 DAY) as enddate from organization_master where id IN(select organization_id from couponmaster where couponcode="'.$couponcode.'" and status="1")');
+		//echo $this->db->last_query(); 
+		return $query->result_array();
+	} */
+	public function getconfigdetails_PB($couponcode)
+	{
+		$query = $this->db->query('select pfid,validity,CURDATE() as startdate,DATE_ADD(CURDATE(), INTERVAL validity-1 DAY) as enddate from product_flavour where pfid="'.$pack_id.'" and status="1" and product_id=3');
+		//echo $this->db->last_query(); 
+		return $query->result_array();
+	}
+	public function getDefaultPlandetails_PB()
+	{
+		$query = $this->db->query('select id,validity,CURDATE() as startdate,DATE_ADD(CURDATE(), INTERVAL validity DAY) as enddate from organization_master where id=1');
+		//echo $this->db->last_query(); 
+		return $query->result_array();
+	}
+	public function subscribeusers_PB($subscriberid,$spoc_name,$username,$salt1,$salt2,$email,$password,$gradeid,$mobile,$address,$couponcode,$orgpwd,$total_licence,$school_name,$startdate,$enddate,$profileimage,$pack_id,$city,$state,$country,$pincode)	
+	{
+		$query = $this->db->query('INSERT INTO puzzle_break_school(subscriberid,spoc_name,spoc_mail,total_licence, salt1, password, salt2,spoc_mobile, status, grade_id,address, username,school_name,created_on,org_password,coupon_code,startdate,enddate,org_id,avatarimage,agreetermsandservice,pack_id,city,state,country,pincode)
+		VALUES("'.$subscriberid.'","'.$spoc_name.'","'.$email.'","'.$total_licence.'","'.$salt1.'","'.$password.'","'.$salt2.'","'.$mobile.'",1,"'.$gradeid.'","'.$address.'","'.$username.'","'.$school_name.'","'.date("Y-m-d").'","'.$orgpwd.'","'.$couponcode.'","'.$startdate.'","'.$enddate.'",1,"'.$profileimage.'",1,"'.$pack_id.'" ,"'.$city.'","'.$state.'","'.$country.'","'.$pincode.'")');
+		
+		//$lastid=$this->db->insert_id();
+		//echo $this->db->last_query();
+		//return $lastid;
+	}
+	//////////
+	public function InsertSchool_PB($username,$email,$address,$orgpwd,$total_licence,$school_name,$startdate,$enddate,$pack_id,$city,$state,$country,$flavour_name)	
+	{
+		$query = $this->multipledb->db->query('INSERT INTO schools(`school_code`, `school_name`, `username`, `password`, `licence_purchased`, `email`, `school_address`, `zone`, `city`, `district`, `state`, `country`, `active`, `createdby`, `creation_date`, `modifiedby`, `modified_date`, `start_date`, `email_cc`, `isdemo`, `islogin`, `last_active_datetime`, `startdate`, `enddate`, `planname`, `status`)
+		VALUES("","'.$school_name.'","'.$username.'","'.$orgpwd.'","'.$total_licence.'","'.$email.'","'.$address.'","","'.$city.'","","'.$state.'","'.$country.'",1,"",NOW(),"",NOW(),"'.$startdate.'","","N","",NOW(),"'.$startdate.'","'.$enddate.'","'.$flavour_name.'",1)');
+		
+		//$lastid=$this->db->insert_id();
+		//echo $this->multipledb->db->last_query();
+		//return $lastid;
+	}
+	//////////
+	public function getstdlist_PB($stdid)
+	{
+		$query = $this->db->query('select * from  puzzle_break_registration  where md5(id)="'.$stdid.'"');		
+		//echo $this->db->last_query();
+		return $query->result_array();
+	}
+	/************************************* PAYMENT - PB - END **********************************/
+		public function program()
+	{
+		$query = $this->db->query('select * from  prefered_program  where status="1"');		
+		//echo $this->db->last_query();
+		return $query->result_array();
+	}
+	
+	public function UpdateB2CHotsStatus($status,$code,$message,$stu_id)
+	{
+		$query = $this->db->query('UPDATE student SET b2c_hots_status="'.$status.'",response_status="'.$code.'",response_code="'.$message.'" where id= "'.$stu_id.'" ');		
+		//echo $this->db->last_query(); exit;
+	}
+	public function country()
+	{
+		$query = $this->db->query('select * from countries');		
+		//echo $this->db->last_query();
+		return $query->result_array();
+	}
+	
+	
+	public function getValidity_Details($pack_id)
+	{
+		$query = $this->db->query('select validity from product_flavour where pfid="'.$pack_id.'" and status=1');		
+		//echo $this->db->last_query();
+		return $query->result_array();
+	}
+}
