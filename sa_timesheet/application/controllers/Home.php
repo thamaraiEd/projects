@@ -1,0 +1,1065 @@
+<?php
+defined('BASEPATH') OR exit('No direct script access allowed');
+
+class Home extends CI_Controller {
+
+	/**
+	 * Index Page for this controller.
+	 *
+	 * Maps to the following URL
+	 * 		http://example.com/index.php/welcome
+	 *	- or -
+	 * 		http://example.com/index.php/welcome/index
+	 *	- or -
+	 * Since this controller is set as the default controller in
+	 * config/routes.php, it's displayed at http://example.com/
+	 *
+	 * So any other public methods not prefixed with an underscore will
+	 * map to /index.php/welcome/<method_name>
+	 * @see https://codeigniter.com/user_guide/general/urls.html
+	 */
+	  public function __construct()
+	  {
+			// Call the CI_Model constructor
+			parent::__construct();
+			$this->load->model('Dashboard_model');
+			$this->load->library('session');	
+			$this->load->library('My_PHPMailer');
+			//$this->load->helper('download');
+			$this->load->library('csvimport'); 
+	  }
+		
+	public function index()  
+	{	
+		//if($this->session->user_id!="" || isset($this->session->user_id)){redirect('index.php/home/dashboard');}
+		//$this->load->view('header');
+		$this->load->view('index');
+		//$this->load->view('footer'); 
+	}
+	
+	public function logincheck() // this function to handle user login check
+	{
+		$username=$this->input->post('username');
+		$password=$this->input->post('password');
+		$data['query'] = $this->Dashboard_model->checkUser($username,$password);
+		
+		if(isset($data['query'][0]['user_id']))
+		{
+			$userid=$data['query'][0]['user_id'];	//echo $userid;exit;
+			$user_name=$data['query'][0]['u_username']; 
+			$rolename=$data['query'][0]['rolename'];
+			$u_role_id=$data['query'][0]['u_role_id'];
+			$u_name=$data['query'][0]['u_name'];
+			$u_email=$data['query'][0]['u_email'];
+			$manager_id=$data['query'][0]['manager_id'];
+			$this->session->set_userdata(
+				array(
+					'user_id'=> $userid, 
+					'name'=> $u_name, 
+					'email'=> $u_email, 
+					'user_name'=> $user_name, 
+					'role_id'=> $u_role_id, 
+					'role_name'=> $rolename,
+					'manager_id'=> $manager_id,
+					'heedios_simple'=> $data['query'][0]['h_simple'],
+					'heedios_complex'=> $data['query'][0]['h_complex'],
+					'slapstick_simple'=> $data['query'][0]['s_simple'],
+					'slapstick_complex'=> $data['query'][0]['s_complex']
+				));
+			if($this->session->role_id==1)
+			{
+				redirect('index.php/home/activitylist'); 
+			}
+			else if($this->session->role_id==2)
+			{
+				redirect('index.php/home/bgartistactivitylist'); //echo $rolename;exit;
+			}
+			else if($this->session->role_id==3)
+			{
+				redirect('index.php/home/approvalist'); //echo $rolename;exit;
+			}
+			else if($this->session->role_id==4)
+			{
+				redirect('index.php/superlead/userdetails');
+			}
+			else if($this->session->role_id==5)
+			{
+				redirect('index.php/admin/userdetails');
+			}
+			else if($this->session->role_id==6)
+			{
+				redirect('index.php/reviewer/userreports');
+			}
+			else if($this->session->role_id==7)
+			{
+				redirect('index.php/storyboard/activitylist');
+			}
+			else if($this->session->role_id==8)
+			{
+				redirect('index.php/comp/activitylist');
+			}
+			else if($this->session->role_id==9)
+			{
+				redirect('index.php/wdev/activitylist');
+			}
+			else if($this->session->role_id==14)
+			{
+				redirect('index.php/wdev/dashboard');
+			}
+		}
+		else 
+		{
+			$data['error'] = "Invalid credentials";				
+			$this->load->view('index', $data);	 //redirect(base_url());			
+		} 
+	} 
+	
+	public function dashboard() 
+	{	 	
+		
+		
+		if($this->session->user_id=="" || !isset($this->session->user_id)){redirect('index.php');} 	
+		//echo"<pre>"; print_r($_SESSION); exit;  
+		$this->load->view('header');
+		$this->load->view('userdetail');
+		$this->load->view('footer');
+	}   
+
+		/********************************** Animator Activity ***********************************************/
+	public function activitylist()  
+	{	  
+		if($this->session->user_id=="" || !isset($this->session->user_id)){redirect('index.php');}
+		// echo "<pre>";print_r($data['actiontype']);exit;
+		$data['getactivitylist']=$this->Dashboard_model->get_activitylist($this->session->user_id); 
+		$this->load->view('header');
+		$this->load->view('animator/activitylist',$data);
+		$this->load->view('footer');
+	} 
+	
+	public function addactivity()  
+	{	
+		if($this->session->user_id=="" || !isset($this->session->user_id)){redirect('index.php');}	
+		//echo $_POST;    
+		$data['actiontype']=$this->Dashboard_model->get_actiontypes(); 
+		$data['characters']=$this->Dashboard_model->get_characters(); 
+		$data['TypeofWork']=$this->Dashboard_model->getTypeofWork(); 
+		$this->load->view('header');
+		$this->load->view('animator/add_activity',$data);
+		$this->load->view('footer');
+	}
+	
+	public function insert_activity()  
+	{
+		// echo $_POST;   
+		//$curDate = date("Y-m-d");		
+		$curDateTime = date("Y-m-d h:m:i");		 
+		
+		$txtcurdate=$this->input->post('txtcurdate');
+		$lgdate= strtotime($txtcurdate);
+		$curDate= date('Y-m-d', $lgdate);
+							
+		$start_time=$this->input->post('starttime');
+		$end_time=$this->input->post('endtime');
+		$txtshotname=$this->input->post('txtshotname');
+		$txtnumcharacters=$this->input->post('txtnumcharacters');
+		$txtassignedframes=$this->input->post('txtassignedframes');
+		$rdheedioslapstick=$this->input->post('rdheedioslapstick');
+		$ddlactiontype=$this->input->post('ddlactiontype');
+		$ddlcharacter1=$this->input->post('ddlcharacter1');
+		$ddlcharacter2=$this->input->post('ddlcharacter2');
+		$ddlcharacter3=$this->input->post('ddlcharacter3');
+		$ddlcharacter4=$this->input->post('ddlcharacter4');
+		$ddlcharacter5=$this->input->post('ddlcharacter5');
+		$rdlibraryavailable=$this->input->post('rdlibraryavailable');
+		$rdmanualcomplexity=$this->input->post('rdmanualcomplexity');
+		$txtcompletedframes=$this->input->post('txtcompletedframes');
+		$txtremark=$this->input->post('txtremark'); 
+		$assigned_duration = $txtassignedframes/25;
+		
+		$ddlsubtask=$this->input->post('ddlsubtask');
+		$ddlworktype=$this->input->post('ddlworktype');
+		$txtCIterationTime=$this->input->post('txtCIterationTime');
+		
+		$stime=strtotime($this->input->post('starttime'));
+		$etime=strtotime($this->input->post('endtime')); 
+		$istime=1;
+		//echo $stime."<".$etime;exit;
+		if($stime!='' && ($etime!='' && $end_time!='00:00:00'))
+		{
+			if($stime>$etime)
+			{
+				$istime=0;
+			}
+			else
+			{
+				$istime=1;
+			}
+		}
+		else
+		{
+			$istime=1;
+		}
+		if($istime==1)
+		{
+			$insertactivity=$this->Dashboard_model->insert_activity($this->session->user_id,$curDate,$start_time,$end_time,$txtshotname,$txtnumcharacters,$txtassignedframes,$assigned_duration,$rdheedioslapstick,$ddlactiontype,$ddlcharacter1,$ddlcharacter2,$ddlcharacter3,$ddlcharacter4,$ddlcharacter5,$rdlibraryavailable,$rdmanualcomplexity,$txtcompletedframes,$txtremark,$curDateTime,$ddlsubtask,$ddlworktype,$txtCIterationTime);
+		
+			$RecordType=$this->Dashboard_model->getAni_TodayAddedProductivityRecord($this->session->user_id,$curDate); 
+			
+			$this->Dashboard_model->Animator_day_percentage($this->session->user_id,$curDate,$ddlworktype,$curDateTime); 
+		
+			$arrResult=array("response"=>"1","msg"=>"Activity ".$RecordType[0]['TotalRecord']." Created Successfully"); 
+		}
+		else
+		{
+			$arrResult=array("response"=>"0","msg"=>"<span style='color:red;'>End time should be greater than start time</span>"); 
+		}
+			echo json_encode($arrResult);exit; 
+	}
+		/********************************** Animator Activity ***********************************************/
+		/********************************** Bg Artist Activity ***********************************************/
+	 
+	public function bgartistactivitylist()  
+	{	 
+		if($this->session->user_id=="" || !isset($this->session->user_id)){redirect('index.php');} 
+		
+	 	$data['getbgactivitylist']=$this->Dashboard_model->get_bgactivitylist($this->session->user_id); 
+		
+		// echo "<pre>";print_r($data['actiontype']);exit;
+		$this->load->view('header');
+		$this->load->view('bgartist/activitylist',$data);
+		$this->load->view('footer');
+	} 
+	
+	public function bgaddactivity()  
+	{	
+		//if($this->session->user_id=="" || !isset($this->session->user_id)){redirect('index.php');}	
+		//echo $_POST;    
+		$data['worktype']=$this->Dashboard_model->get_worktypes();  
+		// echo "<pre>";print_r($data['worktype']);exit;
+		$this->load->view('header');
+		$this->load->view('bgartist/addactivity',$data);
+		$this->load->view('footer');
+	}
+	public function insert_bgactivity()  
+	{	 
+		// echo $_POST;   
+		$curDate = date("Y-m-d");		
+		$curDateTime = date("Y-m-d h:m:i");		
+		//$data['actiontype']=$this->Dashboard_model->get_actiontypes();  
+		$start_time=$this->input->post('starttime');
+		$end_time=$this->input->post('endtime');
+		$txtepisode=$this->input->post('txtepisode');
+		$txtshotname=$this->input->post('txtshotname'); 
+		$txtquantity=$this->input->post('txtquantity'); 
+		$ddlworktype=$this->input->post('ddlworktype'); 
+		$rdheedioslapstick=$this->input->post('rdheedioslapstick'); 
+		$txtactualproductivity=$this->input->post('txtactualproductivity'); 
+		
+		$ddlsubtask=$this->input->post('ddlsubtask'); 
+		
+		$stime=strtotime($this->input->post('starttime'));
+		$etime=strtotime($this->input->post('endtime')); 
+		$istime=1;
+		//echo $stime."<".$etime;exit;
+		if($stime!='' && ($etime!='' && $end_time!='00:00:00'))
+		{
+			if($stime>$etime)
+			{
+				$istime=0;
+			}
+			else
+			{
+				$istime=1;
+			}
+		}
+		else
+		{
+			$istime=1;
+		}
+		if($istime==1)
+		{
+		
+			$insert_bg_activity=$this->Dashboard_model->insertbgactivity($this->session->user_id,$curDate,$start_time,$end_time,$txtepisode,$txtshotname,$txtquantity,$rdheedioslapstick,$ddlworktype,$txtactualproductivity,$curDateTime,$ddlsubtask);
+		
+			$RecordType=$this->Dashboard_model->getBg_TodayAddedProductivityRecord($this->session->user_id,$curDate); 
+		
+			$arrResult=array("response"=>"1","msg"=>"Activity ".$RecordType[0]['TotalRecord']." Created Successfully");
+		}
+		else
+		{
+			$arrResult=array("response"=>"0","msg"=>"<span style='color:red;'>End time should be greater than start time</span>"); 
+		}
+		echo json_encode($arrResult);exit; 
+	}
+	/********************************** Bg Artist Activity ***********************************************/
+	/********************************** Director ***********************************************/
+	public function directordashboard()  
+	{	 
+		//if($this->session->user_id=="" || !isset($this->session->user_id)){redirect('index.php');}
+		//echo $_POST;  
+		
+		// echo "<pre>";print_r($data['actiontype']);exit;
+	 	//$data['getbgactivitylist']=$this->Dashboard_model->get_bgactivitylist(); 
+		// echo "<pre>";print_r($data['actiontype']);exit;
+		$this->load->view('header');
+		$this->load->view('director/dashboard');
+		$this->load->view('footer');
+	} 
+	
+	public function approvalist()  
+	{	 
+		if($this->session->user_id=="" || !isset($this->session->user_id)){redirect('index.php');}
+		//echo $_POST;   
+	 	$data['getrolelist']=$this->Dashboard_model->get_rolelist(); 
+		// echo "<pre>";print_r($data['actiontype']);exit;
+		$this->load->view('header');
+		$this->load->view('director/approvallist',$data);
+		$this->load->view('footer');
+	}
+
+	public function get_animatorlist()  
+	{	  
+		//echo $_POST;  
+		$roleid = $_POST['roleid'];		// echo $roleid;exit;
+		$data['animatordetails']=$this->Dashboard_model->get_animatordetails($roleid);
+		 // echo "<pre>";print_r($data['userroledetails']);exit;
+		$this->load->view('director/animatordetails',$data);
+	}
+
+	public function get_bgartistlist()  
+	{	  
+		//echo $_POST;  
+		$roleid = $_POST['roleid'];		// echo $roleid;exit;
+		$data['bgartistdetails']=$this->Dashboard_model->get_bgartistdetails($roleid);
+		 // echo "<pre>";print_r($data['userroledetails']);exit;
+		$this->load->view('director/bgartistdetails',$data);
+	}
+	public function get_reviewerlist()  
+	{ 
+		$roleid = $_POST['roleid'];	 
+		$data['reviewerlist']=$this->Dashboard_model->get_reviewerlist($roleid); 
+		$this->load->view('director/reviewer_details',$data);
+	}
+	
+	public function get_storyboardlist()  
+	{ 
+		$roleid = $_POST['roleid'];	 
+		$data['reviewerlist']=$this->Dashboard_model->get_storyboardlist($roleid); 
+		$this->load->view('director/storyboard_details',$data);
+	}
+	public function get_complist()  
+	{ 
+		$roleid = $_POST['roleid'];	 
+		$data['reviewerlist']=$this->Dashboard_model->get_complist($roleid); 
+		$this->load->view('director/comp_details',$data);
+	}
+	
+	public function addRemarksforreviewer()  
+	{
+		$updating_userid = $this->session->user_id;		
+		$curDateTime = date("Y-m-d h:m:i"); 	    
+		$rowid = $this->input->post('rowid');	    
+		$uid = $this->input->post('uid');	    
+		 
+		$Remarks = $this->input->post('txtdirectorremarks');
+		
+		if($rowid!='' && $uid!='' && $Remarks!='')
+		{
+			$data['approve_animator']=$this->Dashboard_model->UpdateDirectorRemarks($rowid,$updating_userid,$uid,$Remarks,$curDateTime);
+			
+			$this->session->set_flashdata('Success_msg', 'Activity Updated Successfully'); 
+			$arrResult=array("response"=>"1","msg"=>"Activity Updated Successfully"); 
+		}
+		else
+		{
+			$arrResult=array("response"=>"0","msg"=>"Please fill the required details"); 
+		}
+		
+			echo json_encode($arrResult);exit; 
+	}
+	
+	public function addRemarksforsba()  
+	{
+		$updating_userid = $this->session->user_id;		
+		$curDateTime = date("Y-m-d h:m:i"); 	    
+		$rowid = $this->input->post('rowid');	    
+		$uid = $this->input->post('uid');	    
+		 
+		$Remarks = $this->input->post('txtdirectorremarks');
+		$completed_duration = $this->input->post('txtcompleted_duration');
+		$task_duration = $this->input->post('task_duration');
+		
+		$StoryBoardDetails=$this->Dashboard_model->get_StoryBoardDetails($rowid); 
+		$start_time=$StoryBoardDetails[0]['start_time'];
+		$end_time=$StoryBoardDetails[0]['end_time'];
+		
+		$startTime = new DateTime($start_time);
+		$endTime = new DateTime($end_time);
+		$duration = $startTime->diff($endTime); //$duration is a DateInterval object
+		$workhour=  $duration->format("%H:%I"); //echo $workhour; exit;  
+		
+		if($rowid!='' && $uid!='' && $Remarks!='' && $completed_duration!='')
+		{
+			if($task_duration>=$completed_duration)
+			{
+				$data['approve_animator']=$this->Dashboard_model->UpdateDirectorRemarks_SBA($rowid,$updating_userid,$uid,$Remarks,$curDateTime,$completed_duration,$workhour);
+			
+				$this->session->set_flashdata('Success_msg', 'Activity Updated Successfully'); 
+				$arrResult=array("response"=>"1","msg"=>"Activity Updated Successfully"); 
+			}
+			else
+			{
+				$arrResult=array("response"=>"0","msg"=>"Complted duration must be less than or equal to task duration");
+			}
+		}
+		else
+		{
+			$arrResult=array("response"=>"0","msg"=>"Please fill the required details"); 
+		}
+		
+			echo json_encode($arrResult);exit; 
+	}
+	public function addRemarksforcomp()  
+	{
+		$updating_userid = $this->session->user_id;		
+		$curDateTime = date("Y-m-d h:m:i"); 	    
+		$rowid = $this->input->post('rowid');	    
+		$uid = $this->input->post('uid');	    
+		 
+		$Remarks = $this->input->post('txtdirectorremarks');
+		$completed_duration = $this->input->post('txtcompleted_duration');
+		$task_duration = $this->input->post('task_duration');
+		
+		$StoryBoardDetails=$this->Dashboard_model->get_CompBoardDetails($rowid); 
+		$start_time=$StoryBoardDetails[0]['start_time'];
+		$end_time=$StoryBoardDetails[0]['end_time'];
+		
+		$startTime = new DateTime($start_time);
+		$endTime = new DateTime($end_time);
+		$duration = $startTime->diff($endTime); //$duration is a DateInterval object
+		$workhour=  $duration->format("%H:%I"); //echo $workhour; exit;  
+		
+		if($rowid!='' && $uid!='' && $Remarks!='' && $completed_duration!='')
+		{
+			if($task_duration>=$completed_duration)
+			{
+				$data['approve_animator']=$this->Dashboard_model->UpdateDirectorRemarks_comp($rowid,$updating_userid,$uid,$Remarks,$curDateTime,$completed_duration,$workhour);
+			
+				$this->session->set_flashdata('Success_msg', 'Activity Updated Successfully'); 
+				$arrResult=array("response"=>"1","msg"=>"Activity Updated Successfully"); 
+			}
+			else
+			{
+				$arrResult=array("response"=>"0","msg"=>"Complted duration must be less than or equal to task duration");
+			}
+		}
+		else
+		{
+			$arrResult=array("response"=>"0","msg"=>"Please fill the required details"); 
+		}
+		
+			echo json_encode($arrResult);exit; 
+	}
+	public function approveframe()  
+	{	  
+		 
+		$leadid = $this->session->user_id;		
+		$curDateTime = date("Y-m-d h:m:i");
+		$logdate = $this->input->post('hdnlogdate');	    
+		$aid = $this->input->post('aid');	    
+		$uid = $this->input->post('uid');	    
+		$txtapproveframe = $this->input->post('txtapproveframe');	  
+		$txtdirectorremarks = $this->input->post('txtdirectorremarks');	 
+		$assigned_duration = $this->input->post('assigned_duration');	
+		
+		$ddlworktype=$this->input->post('hdnworktype');	 
+		if($ddlworktype==2)
+		{
+			$txtCIterationTime=$this->input->post('txtCIterationTime');
+		}
+		else
+		{
+			$txtCIterationTime=$this->input->post('hdntxtCIterationTime');
+		}
+		
+		$data['approve_animatordetails']=$this->Dashboard_model->get_approve_animatordetails($aid,$uid);
+		// echo "<pre>";print_r($data['approve_animatordetails']);exit;
+		$completdfrm = $data['approve_animatordetails'][0]['completed_frame'];  
+		$expected_productivity = $data['approve_animatordetails'][0]['expected_productivity']; 
+		$start_time =$data['approve_animatordetails'][0]['start_time'];
+		$end_time = $data['approve_animatordetails'][0]['end_time'];  
+		//if($completdfrm >= $txtapproveframe)
+		{
+			$approvedproductivity = $txtapproveframe/25;
+			$deficit = $approvedproductivity-$assigned_duration; //echo $deficit;exit;
+			$startTime = new DateTime($start_time);
+			$endTime = new DateTime($end_time);
+			$duration = $startTime->diff($endTime); //$duration is a DateInterval object
+			$workhour=  $duration->format("%H:%I"); //echo $workhour; exit;  
+			/*
+			Back up the previous record
+			*/
+			$this->Dashboard_model->Animator_update_log($uid,$aid,$logdate,$curDateTime,$this->session->user_id);
+			
+			$data['approve_animator']=$this->Dashboard_model->update_approvestats($aid,$uid,$txtapproveframe,$txtdirectorremarks,$approvedproductivity,$deficit,$workhour,$curDateTime,$leadid,$txtCIterationTime);
+			//  echo "<pre>";print_r($data['approve_animator']);exit;
+			$this->session->set_flashdata('Success_msg', 'Activity Updated Successfully'); 
+			$arrResult=array("response"=>"1","msg"=>"Activity Updated Successfully"); 
+		}
+		/* else
+		{
+			$arrResult=array("response"=>"2","msg"=>"Approved frame is greater than completed frame");
+			//$this->session->set_flashdata('errcommon', 'Approved frame is greater than completed frame');			
+		}	 */
+		echo json_encode($arrResult);exit; 
+		//$this->load->view('director/bgartistdetails',$data);
+	}
+	 
+   public function approveproductivity()
+    {
+        // echo "<pre>";print_r($_POST);exit;
+        $leadid = $this->session->user_id;       
+        $curDateTime = date("Y-m-d h:m:i");
+        $aid = $this->input->post('aid');       // echo $aid;exit;
+        $uid = $this->input->post('uid');        // echo $uid;exit;
+        $txtapproveproductivity = $this->input->post('txtapproveproductivity');    //  echo $txtapproveframe;exit;
+        $txtdirectorremarks = $this->input->post('txtdirectorremarks');    // echo $txtdirectorremarks;exit;
+        $quantity = $this->input->post('quantity');    // echo $quantity;exit;
+		
+		
+        $data['approve_bgadetails']=$this->Dashboard_model->get_approve_bgartistdetails($aid,$uid);
+        $actual_productivity = $data['approve_bgadetails'][0]['actual_productivity'];
+        $expected_productivity = $data['approve_bgadetails'][0]['expected_productivity'];
+        $start_time =$data['approve_bgadetails'][0]['start_time'];
+        $end_time = $data['approve_bgadetails'][0]['end_time'];
+        //if($actual_productivity >= $txtapproveproductivity)
+        {
+           
+            $deficit =$txtapproveproductivity - $quantity; //echo $deficit;exit;
+            $startTime = new DateTime($start_time);
+            $endTime = new DateTime($end_time);
+            $duration = $startTime->diff($endTime); //$duration is a DateInterval object
+            $workhour=  $duration->format("%H:%I");
+            //  echo $work_hourrrrrr;exit;
+            //$work_hour = ($end_time - $start_time) / 3600;  echo $work_hour;exit;
+            $data['approve_bgartist']=$this->Dashboard_model->update_bgapprovestats($aid,$uid,$txtapproveproductivity,$txtdirectorremarks,$deficit,$workhour,$curDateTime,$leadid);
+            //  echo "<pre>";print_r($data['approve_animator']);exit;
+            $this->session->set_flashdata('Success_msg', 'Productivity updated successfully');
+          
+            $arrResult=array("response"=>"1","msg"=>"Productivity updated successfully");
+        }
+       /*  else
+        {
+            $arrResult=array("response"=>"2","msg"=>"Approved prodctivity is greater than completed frame");
+            //$this->session->set_flashdata('errcommon', 'Approved frame is greater than completed frame');          
+        }  */ 
+        echo json_encode($arrResult);exit;
+        //$this->load->view('director/bgartistdetails',$data);
+    }
+
+	
+	/********************************** Director ***********************************************/
+	 
+	public function editactivity()  
+	{	
+		if($this->session->user_id=="" || !isset($this->session->user_id)){redirect('index.php');}	
+		
+		$logdate=$this->input->get('logdate');
+		$rowid=$this->input->get('rowid');
+		if($logdate!='' && $rowid!='')
+		{	
+			$data['rowid']=$rowid;
+			$data['logdate']=$logdate;
+			$data['userdata']=$this->Dashboard_model->getAnimaterDay($this->session->user_id,$logdate,$rowid);
+			//echo "<pre>";print_r($data['userdata']);exit;
+			$data['actiontype']=$this->Dashboard_model->get_actiontypes(); 
+			$data['characters']=$this->Dashboard_model->get_characters(); 			
+			$data['TypeofWork']=$this->Dashboard_model->getTypeofWork();
+			$this->load->view('header');
+			$this->load->view('animator/edit_activity',$data);
+			$this->load->view('footer');
+		}
+		else
+		{
+			 redirect(base_url());
+		}
+	}
+	
+	public function update_activity()  
+	{	  
+		//echo "<pre>";print_r($_POST);exit;	  
+		$user_id=$this->session->user_id; 
+		$curDate =date('Y-m-d', strtotime($this->input->post('txtcurdate')));
+
+		
+		$curDateTime = date("Y-m-d h:m:i");		
+		//$data['actiontype']=$this->Dashboard_model->get_actiontypes();  
+		$start_time=$this->input->post('starttime');
+		$end_time=$this->input->post('endtime');
+		$txtshotname=$this->input->post('txtshotname');
+		$txtnumcharacters=$this->input->post('txtnumcharacters');
+		$txtassignedframes=$this->input->post('txtassignedframes');
+		$rdheedioslapstick=$this->input->post('rdheedioslapstick');
+		$ddlactiontype=$this->input->post('ddlactiontype');
+		$ddlcharacter1=$this->input->post('ddlcharacter1');
+		$ddlcharacter2=$this->input->post('ddlcharacter2');
+		$ddlcharacter3=$this->input->post('ddlcharacter3');
+		$ddlcharacter4=$this->input->post('ddlcharacter4');
+		$ddlcharacter5=$this->input->post('ddlcharacter5');
+		$rdlibraryavailable=$this->input->post('rdlibraryavailable');
+		$rdmanualcomplexity=$this->input->post('rdmanualcomplexity');
+		$txtcompletedframes=$this->input->post('txtcompletedframes');
+		$txtremark=$this->input->post('txtremark');
+		$assigned_duration = $txtassignedframes/25;
+		
+		$ddlsubtask=$this->input->post('ddlsubtask');
+		$ddlworktype=$this->input->post('ddlworktype');
+		if($ddlworktype==2)
+		{
+			$txtCIterationTime=$this->input->post('txtCIterationTime');
+		}
+		else
+		{
+			$txtCIterationTime=0;
+		}
+		
+		$rowid=$this->input->post('hdnrowid');
+		
+		$stime=strtotime($this->input->post('starttime'));
+		$etime=strtotime($this->input->post('endtime')); 
+		$istime=1; 
+		
+		if($stime!='' && ($etime!='' && $end_time!='00:00:00'))
+		{
+			if($stime>$etime)
+			{
+				$istime=0;
+			}
+			else
+			{
+				$istime=1;
+			}
+		}
+		else
+		{
+			$istime=1;
+		}
+		if($istime==1)
+		{
+		
+			$insertactivity=$this->Dashboard_model->Update_Activity($curDate,$start_time,$end_time,$txtshotname,$txtnumcharacters,	$txtassignedframes,$assigned_duration,$rdheedioslapstick,$ddlactiontype,$ddlcharacter1,$ddlcharacter2,$ddlcharacter3,$ddlcharacter4,$ddlcharacter5,$rdlibraryavailable,$rdmanualcomplexity,$txtcompletedframes,$txtremark,$curDateTime,$user_id,$ddlsubtask,$rowid,$user_id,$ddlworktype,$txtCIterationTime);
+			
+			$this->Dashboard_model->Animator_day_percentage($user_id,$curDate,$ddlworktype,$curDateTime);
+		
+			$arrResult=array("response"=>"1","msg"=>"Activity Updated Successfully");
+			$this->session->set_flashdata('Success_msg', 'Activity Updated Successfully');
+		}
+		else
+		{
+			$arrResult=array("response"=>"0","msg"=>"<span style='color:red;'>End time should be greater than start time</span>"); 
+		}
+		echo json_encode($arrResult);exit; 
+		
+		  
+	}
+	
+	public function editbgactivity()  
+	{	
+		if($this->session->user_id=="" || !isset($this->session->user_id)){redirect('index.php');}	
+	
+		$logdate=$this->input->get('logdate');
+		$rowid=$this->input->get('rowid');
+		if($logdate!='' && $rowid!='')
+		{
+			$data['logdate']=$logdate;
+			$data['rowid']=$rowid;
+			
+			$data['userbgdata']=$this->Dashboard_model->getBgartistDay($this->session->user_id,$logdate,$rowid);
+			// echo "<pre>";print_r($data['userbgdata']);exit;
+			$data['work_type']=$this->Dashboard_model->get_worktypes(); 
+			$this->load->view('header');
+			$this->load->view('bgartist/edit_activity',$data);
+			$this->load->view('footer');
+		}
+		else
+		{
+			 redirect(base_url());
+		}
+	}
+	
+	public function update_bgactivity()  
+	{	 
+		// echo $_POST;   
+		$user_id=$this->session->user_id; 
+		$curDate = $this->input->post('txtcurdate');		
+		$curDateTime = date("Y-m-d h:m:i");		
+		//$data['actiontype']=$this->Dashboard_model->get_actiontypes();  
+		$start_time=$this->input->post('starttime');
+		$end_time=$this->input->post('endtime');
+		$txtepisode=$this->input->post('txtepisode');
+		$txtshotname=$this->input->post('txtshotname'); 
+		$txtquantity=$this->input->post('txtquantity'); 
+		$ddlworktype=$this->input->post('ddlworktype'); 
+		$rdheedioslapstick=$this->input->post('rdheedioslapstick'); 
+		$txtactualproductivity=$this->input->post('txtactualproductivity');
+		
+		$ddlsubtask=$this->input->post('ddlsubtask');
+		$rowid=$this->input->post('hdnrowid');
+		$stime=strtotime($this->input->post('starttime'));
+		$etime=strtotime($this->input->post('endtime')); 
+		$istime=1;
+		//echo $stime."<".$etime;exit;
+		if($stime!='' && ($etime!='' && $end_time!='00:00:00'))
+		{
+			if($stime>$etime)
+			{
+				$istime=0;
+			}
+			else
+			{
+				$istime=1;
+			}
+		}
+		else
+		{
+			$istime=1;
+		}
+		if($istime==1)
+		{
+			$insertactivity=$this->Dashboard_model->Update_BgActivity($curDate,$start_time,$end_time,$txtepisode,$txtshotname,$txtquantity,$rdheedioslapstick,$ddlworktype,$txtactualproductivity,$curDateTime,$user_id,$ddlsubtask,$rowid,$user_id);
+		
+			$arrResult=array("response"=>"1","msg"=>"Activity Updated Successfully");
+			$this->session->set_flashdata('Success_msg', 'Activity Updated Successfully');
+		}
+		else
+		{
+			$arrResult=array("response"=>"0","msg"=>"<span style='color:red;'>End time should be greater than start time</span>"); 
+		}
+			echo json_encode($arrResult);exit; 
+	}
+	 
+	public function logout()
+	{
+        // Unset User Data
+        $this->session->sess_destroy();
+        redirect(base_url());
+    }
+	
+	
+	/*----------- Change Password----------*/
+	
+	public function changepwd()  
+	{
+		if($this->session->user_id=="" || !isset($this->session->user_id)){redirect('index.php');}
+	
+		$this->load->view('header');
+		$this->load->view('changepassword');
+		$this->load->view('footer');
+	}
+	public function update_password()
+	{
+		$user_id=$this->session->user_id;  	
+		$curDateTime = date("Y-m-d h:m:i");
+		$txtpwd=$this->input->post('txtpwd');
+		//$txtcpwd=$this->input->post('txtcpwd');
+		$chk_pwd=$this->Dashboard_model->checkUserPwd($user_id);
+		$chkpassword = $chk_pwd[0]['u_orgpwd'];
+		$hashpass = $this->salt_my_pass($txtpwd); 
+		$shpassword = $hashpass['Hash']; 
+		$salt1 = $hashpass['Salt1']; 
+		$salt2 = $hashpass['Salt2']; 
+		$saltedpass = $salt1 . $shpassword . $salt2; 
+		
+		if($txtpwd==$chkpassword)
+		{
+			$arrResult=array("response"=>"2","msg"=>"Password Already Exists");
+			$this->session->set_flashdata('errcommon', 'Password Already Exists');
+		}
+		else
+		{
+			$update_pwd=$this->Dashboard_model->updatepwd($user_id,$curDateTime,$salt1,$shpassword,$salt2,$txtpwd);
+			$arrResult=array("response"=>"1","msg"=>"Password Changed Successfully");		
+			$this->session->set_flashdata('Success_msg', 'Password Changed Successfully');
+		}
+		echo json_encode($arrResult);exit; 
+	}
+	public function salt_my_pass($password)
+	{
+		// Generate two salts (both are numerical)
+		$salt1 = mt_rand(1000,9999999999);
+		$salt2 = mt_rand(100,999999999);
+
+		// Append our salts to the password
+		$salted_pass = $salt1 . $password . $salt2;
+
+		// Generate a salted hash
+		$pwdhash = sha1($salted_pass);
+
+		// Place into an array
+		$hash['Salt1'] = $salt1;
+		$hash['Salt2'] = $salt2;
+		$hash['Hash'] = $pwdhash;
+
+		// Return the hash and salts to whatever called our function
+		return $hash;
+
+	} 
+	
+	
+	/*-------------------- Reports ---------------*/
+	
+	public function ani_dayreport()  
+	{	
+		if($this->session->user_id=="" || !isset($this->session->user_id)){redirect('index.php');}  
+		
+		$Current_year=date('Y');
+		$start_date=date('Y-01-01');
+		$end_date=date('Y-12-31');
+		
+		$data['yearofMonth']=$this->Dashboard_model->getMonthofYear($start_date,$end_date);
+		$this->load->view('header');
+		$this->load->view('animator/activitylist_daywise',$data);
+		$this->load->view('footer');
+	}
+	public function getUserDayData()  
+	{
+		$month_year=$this->input->post('month_year');
+		
+		$data['Daywisedata']=$this->Dashboard_model->getUserDayData($this->session->user_id,$month_year);
+		$this->load->view('animator/daywisesummary',$data);
+	}
+	
+	public function bga_dayreport()  
+	{	
+		if($this->session->user_id=="" || !isset($this->session->user_id)){redirect('index.php');}  
+		
+		$Current_year=date('Y');
+		$start_date=date('Y-01-01');
+		$end_date=date('Y-12-31');
+		
+		$data['yearofMonth']=$this->Dashboard_model->getMonthofYear($start_date,$end_date);
+		$this->load->view('header');
+		$this->load->view('bgartist/activitylist_daywise',$data);
+		$this->load->view('footer');
+	}
+	public function getBgUserDayData()  
+	{
+		$month_year=$this->input->post('month_year');
+		
+		$data['Daywisedata']=$this->Dashboard_model->getBGAUserDayData($this->session->user_id,$month_year);
+		
+		$this->load->view('bgartist/daywisesummary',$data);
+	}
+	
+	public function dir_dayreport()  
+	{	
+		if($this->session->user_id=="" || !isset($this->session->user_id)){redirect('index.php');}  
+		
+		$Current_year=date('Y');
+		$start_date=date('Y-01-01');
+		$end_date=date('Y-12-31');
+		
+		$data['yearofMonth']=$this->Dashboard_model->getMonthofYear($start_date,$end_date);
+		$data['listofusers']=$this->Dashboard_model->getAllRoleUser();
+		$this->load->view('header');
+		$this->load->view('director/activitylist_daywise',$data);
+		$this->load->view('footer');
+	}
+	public function getDirUserDayData()  
+	{
+		$month_year=$this->input->post('month_year');		
+		$user_id=$this->input->post('user_id');		
+		$roleid=$this->input->post('roleid');	
+		 
+		$data['Daywisedata']=$this->Dashboard_model->getDirUserDayData($user_id,$roleid,$month_year);	
+		 
+			
+		$this->load->view('director/daywisesummary',$data);
+	}
+	
+	
+/*------ ------ ------ ------ Month Wise Report ------------*/
+	public function ani_monthreport()  
+	{	
+		if($this->session->user_id=="" || !isset($this->session->user_id)){redirect('index.php');}  
+		
+		$Current_year=date('Y');
+		$start_date=date('Y-01-01');
+		$end_date=date('Y-12-31');
+		
+		$data['yearofMonth']=$this->Dashboard_model->getMonthofYear($start_date,$end_date);
+		$this->load->view('header');
+		$this->load->view('animator/monthwise_report',$data);
+		$this->load->view('footer');
+	}
+	public function ani_MonthwiseSummary()  
+	{
+		$month_year=$this->input->post('month_year');
+		
+		$data['Daywisedata']=$this->Dashboard_model->ani_MonthwiseSummary($this->session->user_id,$month_year);
+		$this->load->view('animator/monthwisesummary',$data);
+	}
+/*--------------------*/
+	public function bg_monthreport()  
+	{	
+		if($this->session->user_id=="" || !isset($this->session->user_id)){redirect('index.php');}  
+		
+		$Current_year=date('Y');
+		$start_date=date('Y-01-01');
+		$end_date=date('Y-12-31');
+		
+		$data['yearofMonth']=$this->Dashboard_model->getMonthofYear($start_date,$end_date);
+		$this->load->view('header');
+		$this->load->view('bgartist/monthwise_report',$data);
+		$this->load->view('footer');
+	}
+	public function bg_MonthwiseSummary()  
+	{
+		$month_year=$this->input->post('month_year');
+		
+		$data['Daywisedata']=$this->Dashboard_model->bg_MonthwiseSummary($this->session->user_id,$month_year);
+		$this->load->view('bgartist/monthwisesummary',$data);
+	}
+/*--------------------*/	
+	public function dir_monthreport()  
+	{	
+		if($this->session->user_id=="" || !isset($this->session->user_id)){redirect('index.php');}  
+		
+		$Current_year=date('Y');
+		$start_date=date('Y-01-01');
+		$end_date=date('Y-12-31');
+		
+		$data['yearofMonth']=$this->Dashboard_model->getMonthofYear($start_date,$end_date);
+		$data['listofusers']=$this->Dashboard_model->getAllRoleUser();
+		$this->load->view('header');
+		$this->load->view('director/monthwise_report',$data);
+		$this->load->view('footer');
+	}
+	public function dir_MonthwiseSummary()  
+	{
+		$month_year=$this->input->post('month_year');		
+		$user_id=$this->input->post('user_id');		
+		$roleid=$this->input->post('roleid');	
+		 
+		
+		$data['Daywisedata']=$this->Dashboard_model->dir_MonthwiseSummary($user_id,$roleid,$month_year);
+		
+		$this->load->view('director/monthwisesummary',$data);
+	}
+	 
+	 
+	/*----------------------*/
+	
+	public function userdetails()  
+	{	 
+		 
+		//echo $_POST;   
+	 	$data['getrolelist']=$this->Dashboard_model->get_rolelist(); 
+		// echo "<pre>";print_r($data['actiontype']);exit;
+		$this->load->view('header');
+		$this->load->view('director/userdetails',$data);
+		$this->load->view('footer');
+	}
+
+	public function animater_userdetails()  
+	{	  
+		//echo $_POST;  
+		$logdate=$this->input->post('log_date'); 
+		$datearray=explode("-",$logdate);
+		$start_date=$datearray[0];
+		$end_date=$datearray[1];
+		if($start_date!='' && $end_date!='')
+		{
+			$sdate=date("Y-m-d", strtotime($start_date));
+			$edate=date("Y-m-d", strtotime($end_date));
+		}
+		else
+		{
+			$sdate='';
+			$edate='';
+		}
+		 
+		$data['animatordetails']=$this->Dashboard_model->animater_userdetails($sdate,$edate);
+		 // echo "<pre>";print_r($data['userroledetails']);exit;
+		$this->load->view('director/animater_userdetails',$data);
+	}
+
+	public function bgartist_userdetails()  
+	{  
+		$logdate=$this->input->post('log_date'); 
+		$datearray=explode("-",$logdate);
+		$start_date=$datearray[0];
+		$end_date=$datearray[1];
+		if($start_date!='' && $end_date!='')
+		{
+			$sdate=date("Y-m-d", strtotime($start_date));
+			$edate=date("Y-m-d", strtotime($end_date));
+		}
+		else
+		{
+			$sdate='';
+			$edate='';
+		}
+		$data['bgartistdetails']=$this->Dashboard_model->bgartist_userdetails($sdate,$edate);
+		$this->load->view('director/bgartist_userdetails',$data);
+	}
+	
+	public function Reviewer_Userdetails()  
+	{  
+		$logdate=$this->input->post('log_date'); 
+		$datearray=explode("-",$logdate);
+		$start_date=$datearray[0];
+		$end_date=$datearray[1];
+		if($start_date!='' && $end_date!='')
+		{
+			$sdate=date("Y-m-d", strtotime($start_date));
+			$edate=date("Y-m-d", strtotime($end_date));
+		}
+		else
+		{
+			$sdate='';
+			$edate='';
+		}
+		$data['reviewerlist']=$this->Dashboard_model->Reviewer_Userdetails($sdate,$edate);
+		$this->load->view('director/reviewer_userdetails',$data);
+	}
+	public function StoryBoard_Userdetails()  
+	{  
+		$logdate=$this->input->post('log_date'); 
+		$datearray=explode("-",$logdate);
+		$start_date=$datearray[0];
+		$end_date=$datearray[1];
+		if($start_date!='' && $end_date!='')
+		{
+			$sdate=date("Y-m-d", strtotime($start_date));
+			$edate=date("Y-m-d", strtotime($end_date));
+		}
+		else
+		{
+			$sdate='';
+			$edate='';
+		}
+		$data['reviewerlist']=$this->Dashboard_model->StoryBoard_Userdetails($sdate,$edate);
+		$this->load->view('director/storyboard_userdetails',$data);
+	}
+	public function Comp_Userdetails()  
+	{  
+		$logdate=$this->input->post('log_date'); 
+		$datearray=explode("-",$logdate);
+		$start_date=$datearray[0];
+		$end_date=$datearray[1];
+		if($start_date!='' && $end_date!='')
+		{
+			$sdate=date("Y-m-d", strtotime($start_date));
+			$edate=date("Y-m-d", strtotime($end_date));
+		}
+		else
+		{
+			$sdate='';
+			$edate='';
+		}
+		$data['reviewerlist']=$this->Dashboard_model->Comp_Userdetails($sdate,$edate);
+		$this->load->view('director/comp_userdetails',$data);
+	}
+	
+}
