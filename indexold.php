@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=yes">
-<title>SkillAngels Timesheet</title>
+<title>Admin</title>
 <!-- Bootstrap -->
 
 	<link href="<?php echo base_url(); ?>assets/css/bootstrap.min.css" rel="stylesheet">
@@ -35,7 +35,7 @@ input
 }
 .landingContainer{padding-bottom:20px;}
 body {
-    background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab) !important;font-family:'Audiowide';
+    color: #ffffff;
 }
 </style>
 </head>
@@ -45,10 +45,7 @@ body {
 		<!--<div align="center"><img style="width: 200px;display: block;" src="<?php echo  base_url(); ?>assets/images/web_logo.png" />	</div>-->
             <section class="login_content">
 				<form action="<?php echo base_url();?>index.php/home/logincheck" class="cmxform" method="POST" id="commentForm" accept-charset="utf-8">
-					<div class="Logo">
-						<img src="<?php echo base_url(); ?>assets/images/skillangels_logo.png" style="width: 300px;">
-					</div>
-					<!--<h2 style="font-size:23px !important;">Admin Login</h2>-->
+					<h2 style="font-size:23px !important;">Admin Login</h2>
 					<div class="green"></div>
 						<div class="" style="padding-bottom: 20px; color:red; text-shadow:none;"><?php echo $msg_error;?></div>
 					<div>
